@@ -1,0 +1,12 @@
+# x86 GPU environment: compression, Patch Slimming, FP32 evaluation, ONNX export.
+# Verified with Python 3.10. Install the PyTorch build that matches your CUDA
+# first; in the Mobilint compiler container keep the PyTorch that is already
+# installed and install timm with:  pip install --no-deps timm==1.0.25
+torch>=2.4
+torchvision
+timm==1.0.25
+numpy
+PyYAML
+psutil
+onnx
+onnxruntime

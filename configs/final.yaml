@@ -1,0 +1,91 @@
+# Final experiment: ViT-Tiny / ViT-Small, 30% and 50% total-parameter reduction.
+#
+# data_path, output_root, gpus and num_workers describe the machine and can be
+# overridden on the command line (--data-path, --output-root, --gpus,
+# --num-workers). Everything else defines the method; changing it makes a
+# different experiment (docs/METHODOLOGY.md).
+method: baseline_target_peak_global_l2_kd_static_patch
+seed: 2022
+
+data_path: data/imagenet        # ImageNet root with train/ and val/ (or env IMAGENET_DIR)
+output_root: output/final
+gpus: [0, 1, 2, 3]              # models take these GPUs in order; fewer GPUs -> queued
+num_workers: 8
+
+structural:
+  epochs: 30
+  lr_schedule_epochs: 50        # LR schedule length; deliberately longer than epochs
+  checkpoint_selection: terminal_epoch
+  lr: 5.0e-5
+  weight_decay: 0.05
+  clip_grad: 1.0
+  warmup_epochs: 5
+  min_lr: 1.0e-6
+  smoothing: 0.1
+  amp: true
+  model_ema: true
+  model_ema_decay: 0.9998
+  pruning_max_sparsity: 0.95
+  prune_refresh_steps: 100
+  kd_alpha: 0.5
+  kd_temperature: 4.0
+  memory_penalty_weight: 1.0
+  memory_profile_interval: 1
+  memory_batch_size: 1
+  memory_warmups: 10
+  memory_runs: 50
+
+patch_slimming:
+  epsilon: 0.02
+  error_metric: sample_relative_frobenius_sq_mean
+  search_step: 10
+  score_samples: 2048
+  reconstruction_train_samples: 4096
+  reconstruction_eval_samples: 2048
+  block_finetune_epochs: 3
+  final_finetune_epochs: 30
+
+evaluation:
+  val_images: 50000
+  classes: 1000
+
+calibration:
+  num_images: 1000
+  seed: 2022                    # one training image per class, drawn with this seed
+  image_list: null              # or a file of paths relative to <data_path>/train
+  image_root: null              # default: <data_path>/train
+
+compile:
+  inference_scheme: global8     # the NPU runtime core mode must match
+
+# Batch sizes are part of the method: they fix the number of optimizer updates.
+# Do not raise them on a larger GPU.
+models:
+  tiny30:
+    model: vit_tiny_patch16_224
+    teacher: vit_tiny_patch16_224
+    target_compression: 0.30
+    structural_batch: 384
+    search_batch: 32
+    patch_finetune_batch: 512
+  tiny50:
+    model: vit_tiny_patch16_224
+    teacher: vit_tiny_patch16_224
+    target_compression: 0.50
+    structural_batch: 384
+    search_batch: 32
+    patch_finetune_batch: 640
+  small30:
+    model: vit_small_patch16_224
+    teacher: vit_small_patch16_224
+    target_compression: 0.30
+    structural_batch: 192
+    search_batch: 16
+    patch_finetune_batch: 256
+  small50:
+    model: vit_small_patch16_224
+    teacher: vit_small_patch16_224
+    target_compression: 0.50
+    structural_batch: 192
+    search_batch: 16
+    patch_finetune_batch: 256

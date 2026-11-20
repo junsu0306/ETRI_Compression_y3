@@ -1,0 +1,30 @@
+# Datasets and run outputs stay local.
+/data/
+/output/
+/results/
+
+# Model binaries are only tracked inside reference/ (Git LFS).
+*.pt
+*.pth
+*.npy
+*.onnx
+*.mxq
+!/reference/**/*.onnx
+!/reference/**/*.mxq
+!/reference/**/*.npy
+
+# Mobilint SDK files are obtained from the vendor, never committed.
+*.whl
+
+# Python and editor files.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+.vscode/
+.idea/
+.DS_Store
+*.log

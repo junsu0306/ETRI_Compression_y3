@@ -1,0 +1,9 @@
+# NPU host (aarch64 + Mobilint Aries): MXQ benchmark only. No training packages.
+# qbruntime and mobilint-cli come from the Mobilint SDK for the device.
+numpy
+opencv-python-headless
+onnx
+psutil
+mblt-tracker
+# Optional, for benchmark.onnx_reference:
+# onnxruntime

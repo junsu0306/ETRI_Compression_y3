@@ -1,0 +1,6 @@
+# x86 GPU environment: calibration tensors and MXQ compilation.
+# qbcompiler itself comes from the Mobilint SDK (docs/RUNBOOK.md); it needs
+# Python 3.10, glibc >= 2.34 and the CUDA build of PyTorch it was built against.
+numpy
+opencv-python
+onnx

@@ -1,0 +1,110 @@
+"""CompactPSViT 등가성 및 export 관련 테스트."""
+import torch
+import timm
+
+from tests._util import function_tests
+from patch_slimming.psvit.compact import CompactPSViT
+from patch_slimming.psvit.model_utils import get_shape
+
+torch.manual_seed(0)
+_MODEL = "deit_tiny_patch16_224"
+ATOL = 1e-4
+
+
+def _model():
+    return timm.create_model(_MODEL, pretrained=False).eval()
+
+
+def _nested_keep(N, L):
+    """block 0=N tokens … block L-1=1 token(CLS) 인 nested keep_ids (arange prefix)."""
+    keep = []
+    for l in range(L):
+        m = max(1, 1 + (N - 1) * (L - 1 - l) // (L - 1))   # l 깊을수록 작아짐, l=L-1→1
+        keep.append(torch.arange(m))
+    return keep
+
+
+def test_compact_alltokens_equals_full():
+    """모든 block이 전체 토큰 유지 → compact == 원본 timm 모델 (전체 forward 검증)."""
+    model = _model()
+    shp = get_shape(model)
+    all_keep = [torch.arange(shp.num_global_tokens) for _ in range(shp.num_blocks)]
+    compact = CompactPSViT(model, all_keep, select_mode="index_select").eval()
+    images = torch.randn(2, 3, 224, 224)
+    with torch.no_grad():
+        ref = model(images)
+        got = compact(images)
+    diff = (ref - got).abs().max().item()
+    assert diff <= ATOL, f"all-token compact ≠ full model diff={diff:.2e}"
+
+
+def test_compact_matmul_equals_index_select():
+    model = _model()
+    shp = get_shape(model)
+    keep = _nested_keep(shp.num_global_tokens, shp.num_blocks)
+    images = torch.randn(2, 3, 224, 224)
+    a = CompactPSViT(model, keep, select_mode="index_select").eval()
+    b = CompactPSViT(model, keep, select_mode="matmul").eval()
+    b.bake_for_export(device=torch.device("cpu"))
+    with torch.no_grad():
+        da = a(images); db = b(images)
+    diff = (da - db).abs().max().item()
+    assert diff <= ATOL, f"matmul ≠ index_select diff={diff:.2e}"
+
+
+def test_compact_output_shape_and_schedule():
+    model = _model()
+    shp = get_shape(model)
+    keep = _nested_keep(shp.num_global_tokens, shp.num_blocks)
+    compact = CompactPSViT(model, keep, select_mode="index_select").eval()
+    with torch.no_grad():
+        out = compact(torch.randn(2, 3, 224, 224))
+    assert out.shape == (2, shp.num_classes), out.shape
+    sched = compact.token_schedule()
+    assert sched[0] == shp.num_global_tokens and sched[-1] == 1, sched   # 마지막은 CLS만
+
+
+def test_each_block_runtime_shape_matches_schedule():
+    """every block must physically emit the architecture's token count."""
+    model = _model()
+    shp = get_shape(model)
+    keep = _nested_keep(shp.num_global_tokens, shp.num_blocks)
+    compact = CompactPSViT(model, keep, select_mode="index_select").eval()
+    observed = []
+    hooks = [sb.register_forward_hook(lambda _m, _i, out: observed.append(out.x.shape[1]))
+             for sb in compact.slim]
+    with torch.no_grad():
+        compact(torch.randn(1, 3, 224, 224))
+    for hook in hooks:
+        hook.remove()
+    assert observed == compact.token_schedule()[1:], (observed, compact.token_schedule())
+
+
+def test_compact_nhwc_matches_nchw():
+    model = _model()
+    shp = get_shape(model)
+    keep = _nested_keep(shp.num_global_tokens, shp.num_blocks)
+    nchw = torch.randn(2, 3, 224, 224)
+    nhwc = nchw.permute(0, 2, 3, 1).contiguous()
+    a = CompactPSViT(model, keep, nhwc_input=False).eval()
+    b = CompactPSViT(model, keep, nhwc_input=True).eval()
+    with torch.no_grad():
+        diff = (a(nchw) - b(nhwc)).abs().max().item()
+    assert diff <= ATOL, f"NHWC≠NCHW diff={diff:.2e}"
+
+
+def test_npu_static_batch_one_matches_regular_forward():
+    model = _model()
+    shp = get_shape(model)
+    keep = _nested_keep(shp.num_global_tokens, shp.num_blocks)
+    nhwc = torch.randn(1, 224, 224, 3)
+    regular = CompactPSViT(model, keep, nhwc_input=True).eval()
+    static = CompactPSViT(
+        model, keep, nhwc_input=True, npu_static_batch_one=True
+    ).eval()
+    with torch.no_grad():
+        diff = (regular(nhwc) - static(nhwc)).abs().max().item()
+    assert diff <= ATOL, f"static B=1 export path differs: {diff:.2e}"
+
+
+load_tests = function_tests(globals())

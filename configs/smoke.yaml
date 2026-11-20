@@ -1,0 +1,65 @@
+# Quick end-to-end check of every stage with one model, a few epochs and a small
+# ImageNet subset (dataset/prepare_imagenet.py subset). It verifies that the
+# stages connect and resume; the accuracy it produces is meaningless.
+method: baseline_target_peak_global_l2_kd_static_patch
+seed: 2022
+
+data_path: data/imagenet_smoke
+output_root: output/smoke
+gpus: [0]
+num_workers: 8
+
+structural:
+  epochs: 2
+  lr_schedule_epochs: 3
+  checkpoint_selection: terminal_epoch
+  lr: 5.0e-5
+  weight_decay: 0.05
+  clip_grad: 1.0
+  warmup_epochs: 1
+  min_lr: 1.0e-6
+  smoothing: 0.1
+  amp: true
+  model_ema: true
+  model_ema_decay: 0.9998
+  pruning_max_sparsity: 0.95
+  prune_refresh_steps: 100
+  kd_alpha: 0.5
+  kd_temperature: 4.0
+  memory_penalty_weight: 1.0
+  memory_profile_interval: 1
+  memory_batch_size: 1
+  memory_warmups: 10
+  memory_runs: 50
+
+patch_slimming:
+  epsilon: 0.02
+  error_metric: sample_relative_frobenius_sq_mean
+  search_step: 40
+  score_samples: 64
+  reconstruction_train_samples: 128
+  reconstruction_eval_samples: 64
+  block_finetune_epochs: 1
+  final_finetune_epochs: 2
+
+evaluation:
+  val_images: 2000
+  classes: 1000
+
+calibration:
+  num_images: 1000
+  seed: 2022
+  image_list: null
+  image_root: null
+
+compile:
+  inference_scheme: global8
+
+models:
+  tiny30:
+    model: vit_tiny_patch16_224
+    teacher: vit_tiny_patch16_224
+    target_compression: 0.30
+    structural_batch: 384
+    search_batch: 32
+    patch_finetune_batch: 512
