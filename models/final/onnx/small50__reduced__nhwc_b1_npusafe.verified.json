@@ -1,0 +1,57 @@
+{
+  "kind": "reduced",
+  "model": "vit_small_patch16_224",
+  "compression_rate": 50.00965050304154,
+  "mlp_dims": [
+    321,
+    240,
+    253,
+    218,
+    236,
+    256,
+    229,
+    211,
+    336,
+    491,
+    1126,
+    175
+  ],
+  "onnx_sha256": "bb0179179540c922b2e9b93ab5988dfa07da115dad7665853ed5dff4e58d190e",
+  "input_shape": [
+    1,
+    224,
+    224,
+    3
+  ],
+  "ops": [
+    "Add",
+    "Concat",
+    "Constant",
+    "Conv",
+    "Div",
+    "Erf",
+    "Gemm",
+    "LayerNormalization",
+    "MatMul",
+    "Mul",
+    "Reshape",
+    "Shape",
+    "Slice",
+    "Softmax",
+    "Split",
+    "Squeeze",
+    "Transpose"
+  ],
+  "npu_safe": true,
+  "verify_samples": 3,
+  "pytorch_ort_max_abs": 3.4570693969726562e-06,
+  "eager_wrapper_max_abs": 0.0,
+  "output_shape": [
+    1,
+    1000
+  ],
+  "opset": 17,
+  "torch_version": "2.7.1+cu128",
+  "timm_version": "1.0.25",
+  "note": "FP32 graph parity only; MXQ compilation and NPU accuracy not verified"
+}

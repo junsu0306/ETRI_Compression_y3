@@ -3,14 +3,14 @@
 /output/
 /results/
 
-# Model binaries are only tracked inside reference/ (Git LFS).
+# Model binaries are only tracked inside models/ (Git LFS).
 *.pt
 *.pth
 *.npy
 *.onnx
 *.mxq
-!/reference/**/*.onnx
-!/reference/**/*.mxq
+!/models/**/*.onnx
+!/models/**/*.mxq
 !/reference/**/*.npy
 
 # Mobilint SDK files are obtained from the vendor, never committed.

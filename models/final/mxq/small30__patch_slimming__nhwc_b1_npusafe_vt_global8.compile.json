@@ -1,0 +1,61 @@
+{
+  "onnx": "/workspace/ETRI_Compression_y3/output/final/small30/04_onnx/small30__patch_slimming__nhwc_b1_npusafe.onnx",
+  "onnx_sha256": "049fc760690830c0103672d703576086e5ed0b06ea9859dd30f0db889b2d501e",
+  "onnx_bytes": 62152349,
+  "mxq": "/workspace/ETRI_Compression_y3/output/final/small30/07_mxq/small30__patch_slimming__nhwc_b1_npusafe_vt_global8.mxq",
+  "mxq_sha256": "476e776bde710c9da01e099bb3d8436bd7aca0d3bbf1e4855a4350eaf06de388",
+  "mxq_bytes": 19027674,
+  "arguments": {
+    "backend": "onnx",
+    "inference_scheme": "global8",
+    "cpu_offload": true,
+    "config_preset": "vision_transformer"
+  },
+  "calibration": {
+    "directory": "/workspace/ETRI_Compression_y3/output/final/calibration",
+    "profile": {
+      "profile": "opencv_bicubic249_crop224",
+      "color": "RGB",
+      "resize_short": 249,
+      "interpolation_name": "bicubic",
+      "crop": 224,
+      "mean": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "std": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "layout": "HWC",
+      "shape": [
+        224,
+        224,
+        3
+      ],
+      "dtype": "float32",
+      "num_tensors": 1000,
+      "image_root": "/workspace/datasets/imagenet/train",
+      "selection": {
+        "one_per_class_seed": 2022
+      },
+      "image_table_sha256": "75986b5e9fcdc52ffb1d1cc2cb57359e50ffa25b6baa1958daa9d79e1da27c1f"
+    },
+    "image_table_sha256": "75986b5e9fcdc52ffb1d1cc2cb57359e50ffa25b6baa1958daa9d79e1da27c1f"
+  },
+  "environment": {
+    "qbcompiler": "1.1.0",
+    "qbcompiler_distribution": "1.1.0",
+    "python": "3.10.12",
+    "torch": "2.7.1+cu128",
+    "torch_cuda": "12.8",
+    "gpu": "NVIDIA RTX A5000",
+    "numpy": "1.26.0",
+    "onnx": "1.16.2"
+  },
+  "compile_seconds": 121.11446514795534,
+  "finished_utc": "2026-11-20T07:30:32.566458+00:00",
+  "note": "MXQ files are not byte-reproducible; compare compiled models by NPU accuracy"
+}

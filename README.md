@@ -45,11 +45,11 @@ python -m scripts.launch --config configs/final.yaml --data-path /data/imagenet 
 
 같은 명령을 다시 실행하면 끝난 단계는 건너뛰고 이어서 진행한다. 결과는 `output/final/`에 쌓이고, 끝나면 `output/final/reports/RESULTS.md`와 장치로 옮길 `output/final/deploy/`가 만들어진다.
 
-NPU 장치에서는 `deploy/` 폴더를 받아 벤치마크를 실행한다.
+NPU 장치에서는 MXQ 폴더를 지정해 벤치마크를 실행한다. 아래는 저장소에 들어 있는 최종 모델(`models/final/`)을 쓰는 예이고, 직접 실행한 모델은 `deploy/` 폴더를 장치로 옮겨 그 안의 `mxq/`를 지정한다.
 
 ```bash
-python3 -m benchmark.profile_memory --models-dir deploy/mxq --output-dir results/npu_benchmark/run1/isolated_memory
-python3 -m benchmark.eval_imagenet  --models-dir deploy/mxq --val-dir /data/imagenet/val \
+python3 -m benchmark.profile_memory --models-dir models/final/mxq --output-dir results/npu_benchmark/run1/isolated_memory
+python3 -m benchmark.eval_imagenet  --models-dir models/final/mxq --val-dir /data/imagenet/val \
   --output-dir results/npu_benchmark/run1
 ```
 
@@ -67,7 +67,7 @@ python3 -m benchmark.eval_imagenet  --models-dir deploy/mxq --val-dir /data/imag
 - FFN reducing은 NPU에서 정확도를 서버 FP32와 비슷하게 유지하면서 latency와 메모리를 줄인다.
 - Patch Slimming은 NPU에서 가장 빠르고 메모리도 가장 적지만, MXQ로 변환한 뒤 정확도가 서버 FP32보다 7.9~18.1%p 더 떨어진다. MXQ 변환의 양자화에서 생기는 것으로 판단하며, 다시 실행해도 나타날 것으로 예상하는 현상이다.
 
-참고 실행의 ONNX 12개와 MXQ 12개, 측정 기록은 [reference/final_20261006](reference/final_20261006/README.md)에 있다(Git LFS). 새로 실행한 산출물과 섞이지 않도록 실행기의 출력 폴더와 분리되어 있다.
+다시 실행해 얻은 ONNX 12개와 MXQ 12개는 [models/final](models/final/README.md)에 있다(Git LFS). 참고 실행의 측정 기록은 [reference/final_20261006](reference/final_20261006/README.md)에 있고, 그 실행의 모델 파일은 저장소에 두지 않는다.
 
 ## 저장소 구조
 
@@ -84,7 +84,8 @@ common/                       양쪽이 함께 쓰는 전처리·파일 이름 �
 scripts/                      실행기(launch, run_pipeline), 결과 보고서
 tests/                        단위 테스트 (test_device_*: NPU 호스트에서도 실행)
 docs/                         방법론, 실행 안내, 데이터 준비, 결과
-reference/final_20261006/     참고 실행의 ONNX·MXQ와 측정 기록
+models/final/                 최종 ONNX·MXQ (Git LFS)
+reference/final_20261006/     참고 실행의 측정 기록
 ```
 
 ## 문서

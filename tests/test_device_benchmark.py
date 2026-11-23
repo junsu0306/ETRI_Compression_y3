@@ -12,8 +12,8 @@ from benchmark import profile_memory
 from common import naming
 
 ROOT = Path(__file__).resolve().parents[1]
-REFERENCE = ROOT / "reference/final_20261006"
-REPORT = REFERENCE / "npu_benchmark"
+MODELS = ROOT / "models/final"
+REPORT = ROOT / "reference/final_20261006/npu_benchmark"
 
 
 def make_validation(root: Path, names, images=3) -> None:
@@ -32,14 +32,14 @@ class NamingTests(unittest.TestCase):
         self.assertEqual(naming.mxq_to_onnx_stem(Path(mxq).stem), "tiny30__reduced__nhwc_b1_npusafe")
         self.assertEqual(evaluation.model_metadata(Path(mxq).stem), ("tiny30", "tiny", "30", "reduced"))
 
-    def test_reference_models_follow_the_naming_contract(self):
+    def test_final_models_follow_the_naming_contract(self):
         expected_onnx = {naming.onnx_name(*model_id.split("__")) for model_id in naming.MODEL_IDS}
         expected_mxq = {naming.mxq_name(Path(name).stem) for name in expected_onnx}
-        self.assertEqual({p.name for p in (REFERENCE / "onnx").glob("*.onnx")}, expected_onnx)
-        self.assertEqual({p.name for p in (REFERENCE / "mxq").glob("*.mxq")}, expected_mxq)
+        self.assertEqual({p.name for p in (MODELS / "onnx").glob("*.onnx")}, expected_onnx)
+        self.assertEqual({p.name for p in (MODELS / "mxq").glob("*.mxq")}, expected_mxq)
 
     def test_memory_profile_finds_models_by_id(self):
-        args = type("Args", (), {"model_id": ["tiny30__reduced"], "models_dir": REFERENCE / "mxq",
+        args = type("Args", (), {"model_id": ["tiny30__reduced"], "models_dir": MODELS / "mxq",
                                  "core_mode": "global8"})()
         (model_id, path), = profile_memory.discover(args)
         self.assertEqual(path.name, "tiny30__reduced__nhwc_b1_npusafe_vt_global8.mxq")

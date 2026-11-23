@@ -165,7 +165,7 @@ python -m compile.compile_mxq --onnx-dir <onnx 폴더> --calib-dir output/calibr
 필요한 것: Mobilint Aries가 장착된 호스트, 장치에 맞는 Mobilint SDK(`qbruntime`, `mobilint-cli`, 드라이버), Python 3.10 이상.
 
 ```bash
-git lfs install && git lfs pull            # 참고 모델을 쓸 때
+git lfs install && git lfs pull            # models/final의 ONNX·MXQ를 받는다
 pip install -r requirements/device.txt
 mobilint-cli status
 python3 -c "import qbruntime; from mblt_tracker import NPUDeviceTracker; print('runtime OK')"
@@ -176,37 +176,37 @@ python3 -m unittest discover -s tests -t . -p "test_device*.py"
 
 ### 모델과 데이터 옮기기
 
-x86 서버의 `output/final/deploy/`를 장치로 복사하고 해시를 확인한다.
+저장소의 최종 모델은 `models/final/`에 있다([README](../models/final/README.md)). 직접 실행한 모델을 평가하려면 x86 서버의 `output/final/deploy/`를 장치로 복사한다. 어느 쪽이든 해시를 먼저 확인한다.
 
 ImageNet validation도 장치에 있어야 한다(class별 폴더, [DATASET.md](DATASET.md)). **서버에서 FP32 평가에 쓴 것과 같은 validation 사본을 쓴다.** 사본이 다르면 baseline 정확도부터 0.8~0.9%p 달라져([RESULTS.md](RESULTS.md) 1.5절) 서버와 NPU의 차이를 해석할 수 없다. 서버의 `val/` 폴더(약 6.4 GB)를 그대로 복사하는 것이 가장 확실하다.
 
 ```bash
-rsync -a <x86>:<repo>/output/final/deploy/ deploy/
+(cd models/final && sha256sum -c SHA256SUMS)          # 저장소의 최종 모델
+rsync -a <x86>:<repo>/output/final/deploy/ deploy/    # 직접 실행한 모델
 (cd deploy && sha256sum -c SHA256SUMS)
 rsync -a <x86>:/data/imagenet/val/ /data/imagenet/val/
 ```
 
-참고 모델을 평가할 때는 `--models-dir reference/final_20261006/mxq`를 쓴다.
-
 ### 실행 순서
 
 ```bash
+MODELS=models/final            # 직접 실행한 모델이면 deploy
 RUN=results/npu_benchmark/run1
 
 # 1) 파일·데이터 확인 (NPU를 쓰지 않는다)
-python3 -m benchmark.eval_imagenet --models-dir deploy/mxq --val-dir /data/imagenet/val --dry-run
+python3 -m benchmark.eval_imagenet --models-dir $MODELS/mxq --val-dir /data/imagenet/val --dry-run
 
 # 2) 모델마다 1장: 로드와 추론이 되는지 확인
-python3 -m benchmark.eval_imagenet --models-dir deploy/mxq --val-dir /data/imagenet/val \
+python3 -m benchmark.eval_imagenet --models-dir $MODELS/mxq --val-dir /data/imagenet/val \
   --limit 1 --warmup-runs 2 --output-dir results/npu_benchmark/smoke --fail-fast
 
 # 3) 독립 프로세스 메모리 측정 (모델당 약 20초)
-python3 -m benchmark.profile_memory --models-dir deploy/mxq \
+python3 -m benchmark.profile_memory --models-dir $MODELS/mxq \
   --warmups 10 --runs 100 --memory-seconds 10 --memory-sample-ms 20 --npu-sample-ms 500 \
   --output-dir $RUN/isolated_memory
 
 # 4) 전체 평가: 12개 모델 × 50,000장 (약 2시간)
-python3 -m benchmark.eval_imagenet --models-dir deploy/mxq --val-dir /data/imagenet/val \
+python3 -m benchmark.eval_imagenet --models-dir $MODELS/mxq --val-dir /data/imagenet/val \
   --classes 1000 --images-per-class 50 --core-mode global8 --device-id 0 \
   --warmup-runs 10 --memory-sample-ms 20 --npu-sample-ms 500 \
   --output-dir $RUN --fail-fast
@@ -220,10 +220,10 @@ python3 -m benchmark.eval_imagenet --models-dir deploy/mxq --val-dir /data/image
 단일 이미지로 MXQ와 ONNX의 예측을 비교해 볼 수도 있다.
 
 ```bash
-python3 -m benchmark.run_image --mxq deploy/mxq/tiny30__reduced__nhwc_b1_npusafe_vt_global8.mxq --image example.jpg
-python3 -m benchmark.onnx_reference --model deploy/onnx/tiny30__reduced__nhwc_b1_npusafe.onnx --image example.jpg
+python3 -m benchmark.run_image --mxq $MODELS/mxq/tiny30__reduced__nhwc_b1_npusafe_vt_global8.mxq --image example.jpg
+python3 -m benchmark.onnx_reference --model $MODELS/onnx/tiny30__reduced__nhwc_b1_npusafe.onnx --image example.jpg
 ```
 
 ### 결과 판단
 
-새로 컴파일한 MXQ는 해시가 아니라 정확도로 비교한다. 참고값과 다시 학습했을 때의 기대 범위는 [RESULTS.md](RESULTS.md)에 있다. 같은 날 같은 장치에서 참고 MXQ를 한두 개 함께 평가하면 장치 상태가 참고값을 재현하는지 확인할 수 있다.
+새로 컴파일한 MXQ는 해시가 아니라 정확도로 비교한다. 참고값과 다시 학습했을 때의 기대 범위는 [RESULTS.md](RESULTS.md)에 있다.

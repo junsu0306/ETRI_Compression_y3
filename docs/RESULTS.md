@@ -89,7 +89,7 @@ Pretrained baseline은 공식 배포본에서 0.8~0.9%p 높다(timm이 공개한
 
 ## 2. 재현 실행 (공식 ImageNet, RTX A5000)
 
-이 저장소의 코드와 `configs/final.yaml`로 예산 측정부터 MXQ 컴파일까지 처음부터 다시 실행한 결과다. 데이터는 공식 배포본(Hugging Face `ILSVRC/imagenet-1k`), 장비는 RTX A5000 4장(모델당 1장), PyTorch 2.7.1+cu128, qbcompiler 1.1.0이다. 이 실행의 MXQ는 아직 NPU에서 평가하지 않았다. 아래는 모두 서버 값이다.
+이 저장소의 코드와 `configs/final.yaml`로 예산 측정부터 MXQ 컴파일까지 처음부터 다시 실행한 결과다. 데이터는 공식 배포본(Hugging Face `ILSVRC/imagenet-1k`), 장비는 RTX A5000 4장(모델당 1장), PyTorch 2.7.1+cu128, qbcompiler 1.1.0이다. 이 실행의 ONNX와 MXQ는 [models/final](../models/final/README.md)에 있다. MXQ는 아직 NPU에서 평가하지 않았다. 아래는 모두 서버 값이다.
 
 ### 2.1 서버 FP32 정확도 (Top-1 / Top-5, %)
 
