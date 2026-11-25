@@ -89,7 +89,7 @@ Pretrained baseline은 공식 배포본에서 0.8~0.9%p 높다(timm이 공개한
 
 ## 2. 재현 실행 (공식 ImageNet, RTX A5000)
 
-이 저장소의 코드와 `configs/final.yaml`로 예산 측정부터 MXQ 컴파일까지 처음부터 다시 실행한 결과다. 데이터는 공식 배포본(Hugging Face `ILSVRC/imagenet-1k`), 장비는 RTX A5000 4장(모델당 1장), PyTorch 2.7.1+cu128, qbcompiler 1.1.0이다. 이 실행의 ONNX와 MXQ는 [models/final](../models/final/README.md)에 있다. MXQ는 아직 NPU에서 평가하지 않았다. 아래는 모두 서버 값이다.
+이 저장소의 코드와 `configs/final.yaml`로 예산 측정부터 MXQ 컴파일까지 처음부터 다시 실행한 결과다. 데이터는 공식 배포본(Hugging Face `ILSVRC/imagenet-1k`), 장비는 RTX A5000 4장(모델당 1장), PyTorch 2.7.1+cu128, qbcompiler 1.1.0이다. 이 실행의 ONNX와 MXQ는 [models/final](../models/final/README.md)에 있다. 2.1~2.5절은 서버 값이고, 2.6~2.7절은 같은 MXQ를 Mobilint Aries에서 평가한 값이다.
 
 ### 2.1 서버 FP32 정확도 (Top-1 / Top-5, %)
 
@@ -168,9 +168,54 @@ RTX A5000, FP32, batch 1, warmup 10회 뒤 forward 50회의 CUDA allocator 최�
 
 Patch Slimming 시간의 대부분은 30 epoch fine-tuning이고, 탐색은 모델당 5~12분(후보 23~31개)이다.
 
+### 2.6 NPU 정확도 (Top-1 / Top-5, %)
+
+2026-11-23에 Mobilint Aries에서 측정했다. 데이터는 서버 FP32 평가와 같은 공식 배포본 validation 50,000장(Hugging Face parquet의 원본 바이트)이다. 측정 원본은 [models/final/npu_benchmark](../models/final/npu_benchmark/summary.md)에 있다.
+
+| 실험 | 모델 | 서버 FP32 | NPU | NPU − 서버 Top-1 |
+|---|---|---|---|---:|
+| Tiny30 | Baseline | 75.458 / 92.850 | 74.126 / 92.378 | −1.332 |
+| Tiny30 | Reduced | 72.468 / 91.330 | 71.812 / 91.090 | −0.656 |
+| Tiny30 | Patch Slimming | 68.270 / 88.334 | 52.476 / 77.482 | −15.794 |
+| Tiny50 | Baseline | 75.458 / 92.850 | 74.126 / 92.378 | −1.332 |
+| Tiny50 | Reduced | 63.530 / 86.074 | 62.856 / 85.492 | −0.674 |
+| Tiny50 | Patch Slimming | 60.202 / 82.888 | 34.568 / 59.082 | −25.634 |
+| Small30 | Baseline | 81.380 / 96.136 | 81.356 / 96.108 | −0.024 |
+| Small30 | Reduced | 79.964 / 95.326 | 79.520 / 95.152 | −0.444 |
+| Small30 | Patch Slimming | 78.240 / 94.210 | 69.626 / 89.946 | −8.614 |
+| Small50 | Baseline | 81.380 / 96.136 | 81.356 / 96.108 | −0.024 |
+| Small50 | Reduced | 74.298 / 92.314 | 73.578 / 92.064 | −0.720 |
+| Small50 | Patch Slimming | 70.936 / 90.176 | 61.750 / 84.590 | −9.186 |
+
+- 12개 모델 × 50,000장에서 오류 이미지는 없었다. 30%와 50% 실험의 baseline MXQ는 같은 ONNX를 따로 컴파일한 것이고, 50,000장의 예측이 모두 같았다.
+- Reduced는 서버 FP32보다 0.44~0.72%p 낮다(참고 실행 0.30~1.33%p).
+- Patch Slimming은 서버 FP32보다 8.6~25.6%p 낮다(참고 실행 7.9~18.1%p). Tiny50은 참고 실행의 범위를 벗어났다. 이 실험의 token 구조는 참고 실행과 달리 block 0~10에서 121개를 유지하고 마지막 block에서 1개로 줄인다(2.2절). 원인은 확인하지 않았다.
+- Baseline의 NPU − 서버 차이는 Small −0.024%p, Tiny −1.332%p다. 참고 실행(참고 사본)에서는 Small −0.016%p, Tiny −0.434%p였다. NPU 값만 보면 Tiny baseline은 참고 실행의 74.226%와 거의 같다.
+
+### 2.7 NPU 성능
+
+1.2절과 같은 조건이다. `global8`, batch 1, 모델당 warmup 10회. Latency는 `model.infer()` 구간의 평균이고, NPU 메모리는 장치 전체 telemetry의 관측 최대값(MB)이다.
+
+| 실험 | 모델 | Latency ms | Baseline 대비 | NPU peak MB | MXQ MB | GFLOPs |
+|---|---|---:|---:|---:|---:|---:|
+| Tiny30 | Baseline | 3.020 | 1.00x | 12 | 7.6 | 2.507 |
+| Tiny30 | Reduced | 2.886 | 1.05x | 11 | 6.0 | 1.834 |
+| Tiny30 | Patch Slimming | 2.320 | 1.30x | 7 | 5.7 | 0.990 |
+| Tiny50 | Baseline | 3.002 | 1.00x | 12 | 7.6 | 2.507 |
+| Tiny50 | Reduced | 2.811 | 1.07x | 10 | 4.9 | 1.385 |
+| Tiny50 | Patch Slimming | 2.329 | 1.29x | 5 | 4.6 | 0.773 |
+| Small30 | Baseline | 5.714 | 1.00x | 35 | 24.5 | 9.198 |
+| Small30 | Reduced | 5.435 | 1.05x | 28 | 18.3 | 6.594 |
+| Small30 | Patch Slimming | 4.474 | 1.28x | 23 | 18.1 | 4.245 |
+| Small50 | Baseline | 5.755 | 1.00x | 35 | 24.5 | 9.198 |
+| Small50 | Reduced | 5.245 | 1.10x | 24 | 13.9 | 4.859 |
+| Small50 | Patch Slimming | 3.985 | 1.44x | 18 | 13.8 | 2.897 |
+
+모델마다 새 프로세스로 다시 잰 독립 메모리 측정도 12개 모두 같은 peak를 보였다. NPU peak MB는 참고 실행과 모두 같다. 보드 전체 전력은 평균 16.5~17.2 W였다. 측정 환경은 Linux 5.15.185-tegra aarch64, qbruntime 1.1.0, mobilint-cli 1.2.0, Aries driver 1.11.0, firmware 1.2.5이고, 12개 모델 평가에 2.14시간 걸렸다. Latency 분포, 전력, 온도, host 메모리는 [summary.md](../models/final/npu_benchmark/summary.md)에 있다.
+
 ## 3. 다시 실행했을 때의 기대 범위
 
-같은 설정으로 처음부터 다시 학습하면 수치가 참고값과 조금 다르다. 아래 범위 안이면 정상이다. 2절의 재현 실행도 이 범위 안이었다.
+같은 설정으로 처음부터 다시 학습하면 수치가 참고값과 조금 다르다. 아래 범위 안이면 정상이다. 2절의 재현 실행도 NPU의 Tiny50 Patch Slimming을 빼고 이 범위 안이었다.
 
 | 항목 | 기대 |
 |---|---|
@@ -181,8 +226,8 @@ Patch Slimming 시간의 대부분은 30 epoch fine-tuning이고, 탐색은 모�
 | Patch Slimming token 구조 | 달라질 수 있다 (오차 0.02 경계에서 10개 단위로 정해진다) |
 | Patch Slimming 정확도 | 1%p 안팎 차이 가능 (재현 실행 +0.45~+1.13%p) |
 | 서버 메모리 수치 | GPU·CUDA에 따라 달라질 수 있다 |
-| NPU baseline 정확도 | 참고값과 거의 같다 |
-| NPU reduced 정확도 | 서버 FP32보다 0.3~1.4%p 낮은 수준 |
-| NPU patch slimming 정확도 | 서버 FP32보다 크게 낮다 (참고 실행 7.9~18.1%p) |
+| NPU baseline 정확도 | 서버 FP32보다 조금 낮다 (참고 실행 0.02~0.43%p, 재현 실행 0.02~1.33%p) |
+| NPU reduced 정확도 | 서버 FP32보다 0.3~1.4%p 낮은 수준 (재현 실행 0.44~0.72%p) |
+| NPU patch slimming 정확도 | 서버 FP32보다 크게 낮다 (참고 실행 7.9~18.1%p, 재현 실행 8.6~25.6%p) |
 
 Reduced 정확도가 참고값과 2%p 이상 다르면 설정이 달라졌을 가능성이 크다. [METHODOLOGY.md](METHODOLOGY.md)의 고정 설정부터 대조한다.

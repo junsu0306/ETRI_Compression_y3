@@ -11,6 +11,7 @@
 *.mxq
 !/models/**/*.onnx
 !/models/**/*.mxq
+!/models/**/*.npy
 !/reference/**/*.npy
 
 # Mobilint SDK files are obtained from the vendor, never committed.

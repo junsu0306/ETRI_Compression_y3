@@ -55,17 +55,17 @@ python3 -m benchmark.eval_imagenet  --models-dir models/final/mxq --val-dir /dat
 
 ## 결과
 
-전체 표는 [docs/RESULTS.md](docs/RESULTS.md)에 있다. 아래는 참고 실행 `final_20261006`의 ImageNet validation 50,000장 Top-1이다. 이 저장소의 코드로 처음부터 다시 실행한 서버 결과(공식 ImageNet, RTX A5000)는 같은 문서의 2절에 따로 있다.
+전체 표는 [docs/RESULTS.md](docs/RESULTS.md)에 있다. 아래는 최종 모델([models/final](models/final/README.md))의 공식 ImageNet validation 50,000장 Top-1이다. 서버는 RTX A5000, NPU는 Mobilint Aries에서 측정했다. 참고 실행 `final_20261006`의 결과는 같은 문서의 1절에 따로 있다.
 
 | 실험 | 파라미터 (baseline → 압축) | 서버 FP32: baseline / reduced / patch | NPU: baseline / reduced / patch | NPU latency ms: baseline / reduced / patch |
 |---|---|---|---|---|
-| Tiny30 | 5.72M → 4.00M | 74.660 / 72.212 / 67.902 | 74.226 / 70.880 / 53.528 | 3.192 / 3.065 / 2.408 |
-| Tiny50 | 5.72M → 2.86M | 74.660 / 63.230 / 59.252 | 74.226 / 62.442 / 41.164 | 3.170 / 2.976 / 2.388 |
-| Small30 | 22.05M → 15.43M | 80.502 / 79.624 / 77.970 | 80.486 / 79.324 / 70.094 | 5.884 / 5.569 / 4.585 |
-| Small50 | 22.05M → 11.02M | 80.502 / 74.002 / 70.736 | 80.486 / 73.616 / 61.082 | 5.821 / 5.310 / 4.204 |
+| Tiny30 | 5.72M → 4.00M | 75.458 / 72.468 / 68.270 | 74.126 / 71.812 / 52.476 | 3.020 / 2.886 / 2.320 |
+| Tiny50 | 5.72M → 2.86M | 75.458 / 63.530 / 60.202 | 74.126 / 62.856 / 34.568 | 3.002 / 2.811 / 2.329 |
+| Small30 | 22.05M → 15.43M | 81.380 / 79.964 / 78.240 | 81.356 / 79.520 / 69.626 | 5.714 / 5.435 / 4.474 |
+| Small50 | 22.05M → 11.02M | 81.380 / 74.298 / 70.936 | 81.356 / 73.578 / 61.750 | 5.755 / 5.245 / 3.985 |
 
-- FFN reducing은 NPU에서 정확도를 서버 FP32와 비슷하게 유지하면서 latency와 메모리를 줄인다.
-- Patch Slimming은 NPU에서 가장 빠르고 메모리도 가장 적지만, MXQ로 변환한 뒤 정확도가 서버 FP32보다 7.9~18.1%p 더 떨어진다. MXQ 변환의 양자화에서 생기는 것으로 판단하며, 다시 실행해도 나타날 것으로 예상하는 현상이다.
+- FFN reducing은 NPU에서 정확도를 서버 FP32와 비슷하게 유지하면서(0.4~0.7%p 차이) latency와 메모리를 줄인다.
+- Patch Slimming은 NPU에서 가장 빠르고 메모리도 가장 적지만, MXQ로 변환한 뒤 정확도가 서버 FP32보다 8.6~25.6%p 더 떨어진다. 참고 실행(7.9~18.1%p)에 이어 다시 실행해도 나타났다. MXQ 변환의 양자화에서 생기는 것으로 판단한다.
 
 다시 실행해 얻은 ONNX 12개와 MXQ 12개는 [models/final](models/final/README.md)에 있다(Git LFS). 참고 실행의 측정 기록은 [reference/final_20261006](reference/final_20261006/README.md)에 있고, 그 실행의 모델 파일은 저장소에 두지 않는다.
 
